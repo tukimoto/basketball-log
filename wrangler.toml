@@ -5,4 +5,4 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "basketball-log-db"
-database_id = "" # wrangler d1 create basketball-log-db で取得後に設定
+database_id = "a9dcc904-eb39-4f01-9ba8-aa158d7e05f6" # wrangler d1 create basketball-log-db で取得後に設定
