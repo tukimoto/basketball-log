@@ -8,6 +8,7 @@ import ActionPanel from "@/components/game/ActionPanel";
 import GameHeader from "@/components/game/GameHeader";
 import StatsModal from "@/components/stats/StatsModal";
 import QuarterModal from "@/components/game/QuarterModal";
+import { useSync } from "@/hooks/useSync";
 import { calcPlayerStats, exportCSV } from "@/lib/stats";
 import type { Quarter } from "@/types";
 
@@ -42,6 +43,7 @@ export default function GameRecordPage() {
   } = store;
 
   const { players } = usePlayerStore();
+  const { pushToCloud } = useSync();
 
   const game = games.find((g) => g.id === id);
 
@@ -122,12 +124,13 @@ export default function GameRecordPage() {
     [id, pendingQuarter, gamePlayerIds, getActivePlayers, togglePlayerActive, setQuarter],
   );
 
-  const handleEndGame = useCallback(() => {
+  const handleEndGame = useCallback(async () => {
     if (!id) return;
     if (confirm("試合を終了してスタッツ画面に移動しますか？")) {
+      await pushToCloud();
       navigate(`/games/${id}`);
     }
-  }, [id, navigate]);
+  }, [id, navigate, pushToCloud]);
 
   const handleExportCSV = () => {
     if (!game) return;
