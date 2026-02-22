@@ -58,6 +58,30 @@ export function useSync() {
           api.logs.list(),
         ]);
 
+      const { players: localPlayers } = usePlayerStore.getState();
+      const {
+        games: localGames,
+        gamePlayers: localGamePlayers,
+        logs: localLogs,
+      } = useGameStore.getState();
+
+      const hasCloudData =
+        cloudPlayers.length > 0 ||
+        cloudGames.length > 0 ||
+        cloudGamePlayers.length > 0 ||
+        cloudLogs.length > 0;
+      const hasLocalData =
+        localPlayers.length > 0 ||
+        localGames.length > 0 ||
+        localGamePlayers.length > 0 ||
+        localLogs.length > 0;
+
+      // Prevent accidental data loss when cloud is still empty.
+      if (!hasCloudData && hasLocalData) {
+        setStatus("success");
+        return;
+      }
+
       storage.set("players", cloudPlayers);
       storage.set("games", cloudGames);
       storage.set("game_players", cloudGamePlayers);
