@@ -112,7 +112,7 @@ export default function HomePage() {
                         if (confirm(`「vs ${game.opponentName}」を削除しますか？`))
                           deleteGame(game.id);
                       }}
-                      className="p-2 rounded-lg bg-white/5 hover:bg-danger/20 text-white/30 hover:text-danger transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-2 rounded-lg bg-white/5 hover:bg-danger/20 text-white/30 hover:text-danger transition-colors"
                       title="削除"
                     >
                       <Trash2 size={18} />
