@@ -51,12 +51,19 @@ export function useSync() {
     setStatus("syncing");
     try {
       const [cloudPlayers, cloudGames, cloudGamePlayers, cloudLogs] =
-        await Promise.all([
+        await Promise.allSettled([
           api.players.list(),
           api.games.list(),
           api.gamePlayers.list(),
           api.logs.list(),
         ]);
+
+      const players =
+        cloudPlayers.status === "fulfilled" ? cloudPlayers.value : [];
+      const games = cloudGames.status === "fulfilled" ? cloudGames.value : [];
+      const gamePlayers =
+        cloudGamePlayers.status === "fulfilled" ? cloudGamePlayers.value : [];
+      const logs = cloudLogs.status === "fulfilled" ? cloudLogs.value : [];
 
       const { players: localPlayers } = usePlayerStore.getState();
       const {
@@ -66,26 +73,25 @@ export function useSync() {
       } = useGameStore.getState();
 
       const hasCloudData =
-        cloudPlayers.length > 0 ||
-        cloudGames.length > 0 ||
-        cloudGamePlayers.length > 0 ||
-        cloudLogs.length > 0;
+        players.length > 0 ||
+        games.length > 0 ||
+        gamePlayers.length > 0 ||
+        logs.length > 0;
       const hasLocalData =
         localPlayers.length > 0 ||
         localGames.length > 0 ||
         localGamePlayers.length > 0 ||
         localLogs.length > 0;
 
-      // Prevent accidental data loss when cloud is still empty.
       if (!hasCloudData && hasLocalData) {
         setStatus("success");
         return;
       }
 
-      storage.set("players", cloudPlayers);
-      storage.set("games", cloudGames);
-      storage.set("game_players", cloudGamePlayers);
-      storage.set("logs", cloudLogs);
+      storage.set("players", players);
+      storage.set("games", games);
+      storage.set("game_players", gamePlayers);
+      storage.set("logs", logs);
 
       usePlayerStore.getState().load();
       useGameStore.getState().load();
