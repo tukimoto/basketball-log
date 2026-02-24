@@ -24,6 +24,7 @@ export default function StatsModal({
   if (!isOpen) return null;
 
   const totalReb = stats.reduce((s, p) => s + p.offReb + p.defReb, 0);
+  const totalAst = stats.reduce((s, p) => s + p.assists, 0);
   const totalFouls = stats.reduce((s, p) => s + p.fouls, 0);
 
   return (
@@ -55,7 +56,7 @@ export default function StatsModal({
         </div>
 
         {/* Team summary */}
-        <div className="grid grid-cols-3 gap-4 p-4 border-b border-white/10">
+        <div className="grid grid-cols-4 gap-4 p-4 border-b border-white/10">
           <div className="text-center">
             <div className="text-2xl font-bold text-white">{teamScore}</div>
             <div className="text-xs text-white/50">合計得点</div>
@@ -63,6 +64,10 @@ export default function StatsModal({
           <div className="text-center">
             <div className="text-2xl font-bold text-white">{totalReb}</div>
             <div className="text-xs text-white/50">リバウンド</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-white">{totalAst}</div>
+            <div className="text-xs text-white/50">アシスト</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-white">{totalFouls}</div>
@@ -84,12 +89,13 @@ export default function StatsModal({
                 <th className="text-center p-3">FT%</th>
                 <th className="text-center p-3">ORB</th>
                 <th className="text-center p-3">DRB</th>
+                <th className="text-center p-3">AST</th>
                 <th className="text-center p-3">PF</th>
               </tr>
             </thead>
             <tbody>
               {stats
-                .filter((s) => s.points > 0 || s.offReb + s.defReb > 0 || s.fouls > 0 || s.shotMade + s.shotMiss > 0)
+                .filter((s) => s.points > 0 || s.offReb + s.defReb > 0 || s.assists > 0 || s.fouls > 0 || s.shotMade + s.shotMiss > 0)
                 .sort((a, b) => b.points - a.points)
                 .map((s) => (
                   <tr key={s.playerId} className="border-b border-white/5 hover:bg-white/5">
@@ -108,6 +114,7 @@ export default function StatsModal({
                     <td className="p-3 text-center text-white/70">{s.ftPercent.toFixed(1)}%</td>
                     <td className="p-3 text-center text-white/70">{s.offReb}</td>
                     <td className="p-3 text-center text-white/70">{s.defReb}</td>
+                    <td className="p-3 text-center text-purple-300 font-bold">{s.assists}</td>
                     <td className={cn("p-3 text-center", s.fouls >= 5 ? "text-danger font-bold" : "text-white/70")}>
                       {s.fouls}
                     </td>

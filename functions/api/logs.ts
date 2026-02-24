@@ -10,6 +10,9 @@ interface LogBody {
   zoneId: number | null;
   result: string;
   timestamp: number;
+  passerPlayerId?: string | null;
+  scorerPlayerId?: string | null;
+  linkedShotLogId?: string | null;
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
@@ -19,7 +22,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   const url = new URL(request.url);
   const gameId = url.searchParams.get("gameId");
 
-  let query = "SELECT id, game_id as gameId, quarter, player_id as playerId, action, zone_id as zoneId, result, timestamp FROM logs";
+  let query = `SELECT id, game_id as gameId, quarter, player_id as playerId, action, zone_id as zoneId, result, timestamp,
+    passer_player_id as passerPlayerId, scorer_player_id as scorerPlayerId, linked_shot_log_id as linkedShotLogId
+    FROM logs`;
   const bindings: string[] = [];
 
   if (gameId) {
@@ -41,11 +46,25 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const entries = Array.isArray(body) ? body : [body];
 
   const stmt = env.DB.prepare(
-    "INSERT OR REPLACE INTO logs (id, game_id, quarter, player_id, action, zone_id, result, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    `INSERT OR REPLACE INTO logs
+      (id, game_id, quarter, player_id, action, zone_id, result, timestamp, passer_player_id, scorer_player_id, linked_shot_log_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   const batch = entries.map((e) =>
-    stmt.bind(e.id, e.gameId, e.quarter, e.playerId, e.action, e.zoneId, e.result, e.timestamp),
+    stmt.bind(
+      e.id,
+      e.gameId,
+      e.quarter,
+      e.playerId,
+      e.action,
+      e.zoneId,
+      e.result,
+      e.timestamp,
+      e.passerPlayerId ?? null,
+      e.scorerPlayerId ?? null,
+      e.linkedShotLogId ?? null,
+    ),
   );
 
   await env.DB.batch(batch);

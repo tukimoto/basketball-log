@@ -38,7 +38,7 @@ export const api = {
   },
   logs: {
     list: (gameId?: string) =>
-      request<{ id: string; gameId: string; quarter: number; playerId: string; action: string; zoneId: number | null; result: string; timestamp: number }[]>(
+      request<{ id: string; gameId: string; quarter: number; playerId: string; action: string; zoneId: number | null; result: string; timestamp: number; passerPlayerId?: string | null; scorerPlayerId?: string | null; linkedShotLogId?: string | null }[]>(
         gameId ? `/logs?gameId=${gameId}` : "/logs",
       ),
     save: (data: unknown) =>

@@ -1,16 +1,22 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useGameStore } from "@/stores/gameStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import BackLink from "@/components/common/BackLink";
-import { calcPlayerStats, calcTeamScore, exportCSV } from "@/lib/stats";
+import { calcPlayerStats, calcTeamScore, calcZoneStats, calcZoneStatsByPlayer, calcZoneRebStats, calcZoneRebStatsByPlayer, exportCSV } from "@/lib/stats";
 import { formatDate, cn } from "@/lib/utils";
 import { Play, Download } from "lucide-react";
+import CourtFGHeatmap from "@/components/stats/CourtFGHeatmap";
+import CourtRebHeatmap from "@/components/stats/CourtRebHeatmap";
+
+type AnalysisTab = "fg" | "reb" | "ast";
 
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { games, logs, getGamePlayerIds } = useGameStore();
   const { players } = usePlayerStore();
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("team");
+  const [activeTab, setActiveTab] = useState<AnalysisTab>("fg");
 
   const game = games.find((g) => g.id === id);
 
@@ -35,6 +41,42 @@ export default function GameDetailPage() {
     [gameLogs, gamePlayers],
   );
 
+  const teamZoneStats = useMemo(() => calcZoneStats(gameLogs), [gameLogs]);
+  const selectedPlayerZoneStats = useMemo(() => {
+    if (selectedPlayerId === "team") return teamZoneStats;
+    return calcZoneStatsByPlayer(gameLogs, selectedPlayerId);
+  }, [gameLogs, selectedPlayerId, teamZoneStats]);
+
+  const teamZoneRebStats = useMemo(() => calcZoneRebStats(gameLogs), [gameLogs]);
+  const selectedPlayerZoneRebStats = useMemo(() => {
+    if (selectedPlayerId === "team") return teamZoneRebStats;
+    return calcZoneRebStatsByPlayer(gameLogs, selectedPlayerId);
+  }, [gameLogs, selectedPlayerId, teamZoneRebStats]);
+
+  const selectedFg = useMemo(() => {
+    if (selectedPlayerId === "team") {
+      const made = teamZoneStats.reduce((s, z) => s + z.made, 0);
+      const att = teamZoneStats.reduce((s, z) => s + z.attempts, 0);
+      return att > 0 ? (made / att) * 100 : 0;
+    }
+    const ps = stats.find((s) => s.playerId === selectedPlayerId);
+    return ps?.fgPercent ?? 0;
+  }, [selectedPlayerId, teamZoneStats, stats]);
+
+  const assistLogs = useMemo(() => {
+    const astLogs = gameLogs.filter((l) => l.action === "AST");
+    if (selectedPlayerId === "team") return astLogs;
+    return astLogs.filter(
+      (l) => l.passerPlayerId === selectedPlayerId || l.scorerPlayerId === selectedPlayerId,
+    );
+  }, [gameLogs, selectedPlayerId]);
+
+  const playerMap = useMemo(() => {
+    const m = new Map<string, { name: string; number: number }>();
+    for (const p of players) m.set(p.id, { name: p.name, number: p.number });
+    return m;
+  }, [players]);
+
   if (!game || !id) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-900 text-white">
@@ -46,6 +88,12 @@ export default function GameDetailPage() {
   const handleExport = () => {
     exportCSV(stats, `${game.gameDate}_vs_${game.opponentName}`);
   };
+
+  const tabs: { key: AnalysisTab; label: string }[] = [
+    { key: "fg", label: "FG%" },
+    { key: "reb", label: "REB" },
+    { key: "ast", label: "AST" },
+  ];
 
   return (
     <div className="h-full bg-slate-900 text-white overflow-auto">
@@ -98,7 +146,7 @@ export default function GameDetailPage() {
                   <th className="text-center p-3">FT%</th>
                   <th className="text-center p-3">ORB</th>
                   <th className="text-center p-3">DRB</th>
-                  <th className="text-center p-3">REB</th>
+                  <th className="text-center p-3">AST</th>
                   <th className="text-center p-3">PF</th>
                 </tr>
               </thead>
@@ -132,9 +180,7 @@ export default function GameDetailPage() {
                       </td>
                       <td className="p-3 text-center text-white/70">{s.offReb}</td>
                       <td className="p-3 text-center text-white/70">{s.defReb}</td>
-                      <td className="p-3 text-center text-white/70">
-                        {s.offReb + s.defReb}
-                      </td>
+                      <td className="p-3 text-center text-purple-300 font-bold">{s.assists}</td>
                       <td
                         className={cn(
                           "p-3 text-center",
@@ -150,6 +196,90 @@ export default function GameDetailPage() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Player selector + tabs */}
+        <div className="mt-6">
+          <div className="bg-surface rounded-xl p-4 mb-3 flex flex-wrap items-center gap-3">
+            <select
+              value={selectedPlayerId}
+              onChange={(e) => setSelectedPlayerId(e.target.value)}
+              className="bg-slate-800 text-white text-sm font-bold rounded-lg px-3 py-2 border border-white/20 focus:border-accent focus:outline-none"
+            >
+              <option value="team">チーム全体</option>
+              {gamePlayers
+                .sort((a, b) => a.number - b.number)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    #{p.number} {p.name}
+                  </option>
+                ))}
+            </select>
+            {activeTab === "fg" && (
+              <span className="text-sm text-white/70">
+                FG%: <span className="font-bold text-accent">{selectedFg.toFixed(1)}%</span>
+              </span>
+            )}
+          </div>
+
+          {/* Tab bar */}
+          <div className="flex gap-1 mb-3">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={cn(
+                  "flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors",
+                  activeTab === t.key
+                    ? "bg-accent text-black"
+                    : "bg-surface text-white/60 hover:bg-surface-light",
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          {activeTab === "fg" && (
+            <CourtFGHeatmap zoneStats={selectedPlayerZoneStats} title="ゾーン別 FG% ヒートマップ" />
+          )}
+          {activeTab === "reb" && (
+            <CourtRebHeatmap zoneRebStats={selectedPlayerZoneRebStats} title="ゾーン別 リバウンド分布" />
+          )}
+          {activeTab === "ast" && (
+            <div className="bg-surface rounded-xl p-4">
+              <h3 className="text-sm font-bold text-white mb-3">アシスト一覧</h3>
+              {assistLogs.length === 0 ? (
+                <p className="text-white/40 text-sm text-center py-6">アシスト記録なし</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {assistLogs.map((l) => {
+                    const passer = l.passerPlayerId ? playerMap.get(l.passerPlayerId) : null;
+                    const scorer = l.scorerPlayerId ? playerMap.get(l.scorerPlayerId) : null;
+                    return (
+                      <div
+                        key={l.id}
+                        className="flex items-center gap-3 bg-white/5 rounded-lg px-4 py-3"
+                      >
+                        <span className="text-xs text-white/40">Q{l.quarter}</span>
+                        <span className="text-sm font-bold text-purple-300">
+                          #{passer?.number ?? "?"} {passer?.name ?? "不明"}
+                        </span>
+                        <span className="text-white/40">→</span>
+                        <span className="text-sm font-bold text-white">
+                          #{scorer?.number ?? "?"} {scorer?.name ?? "不明"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-[10px] text-white/40 mt-3">
+                合計 {assistLogs.length} 件のアシスト
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Log count */}

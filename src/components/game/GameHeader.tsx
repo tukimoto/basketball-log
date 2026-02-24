@@ -9,6 +9,7 @@ interface GameHeaderProps {
   currentQuarter: Quarter;
   onQuarterChange: (q: Quarter) => void;
   onNextQuarter: () => void;
+  onSubstitution: () => void;
   onOpponentScoreChange: (delta: number) => void;
   onUndo: () => void;
   onStatsOpen: () => void;
@@ -33,6 +34,7 @@ export default function GameHeader({
   currentQuarter,
   onQuarterChange,
   onNextQuarter,
+  onSubstitution,
   onOpponentScoreChange,
   onUndo,
   onStatsOpen,
@@ -81,6 +83,13 @@ export default function GameHeader({
           <ChevronRight size={14} />
         </button>
       )}
+      <button
+        onClick={onSubstitution}
+        className="px-2 py-1 rounded text-xs font-bold bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
+        title="現在Qの選手交代"
+      >
+        交代
+      </button>
 
       {/* Scoreboard */}
       <div className="flex items-center gap-3 ml-auto">

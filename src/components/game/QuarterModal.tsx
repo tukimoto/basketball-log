@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { Player, Quarter } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,12 @@ export default function QuarterModal({
   onCancel,
 }: QuarterModalProps) {
   const [selected, setSelected] = useState<string[]>(previousActiveIds);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelected(previousActiveIds);
+    }
+  }, [isOpen, previousActiveIds, targetQuarter]);
 
   const sorted = useMemo(
     () => [...allGamePlayers].sort((a, b) => a.number - b.number),

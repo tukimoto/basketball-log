@@ -1,4 +1,4 @@
-export type Action = "SHOT" | "FT" | "REB" | "FOUL";
+export type Action = "SHOT" | "FT" | "REB" | "FOUL" | "AST";
 
 export type ShotResult = "MAKE" | "MISS";
 export type ReboundResult = "OFF" | "DEF";
@@ -13,10 +13,15 @@ export interface Log {
   quarter: Quarter;
   playerId: string;
   action: Action;
-  zoneId: number | null; // 1-9 (FTの場合はnull)
+  zoneId: number | null; // 1-9 (FT/ASTの場合はnull)
   result: Result;
   timestamp: number;
   synced?: boolean;
+
+  // AST専用
+  passerPlayerId?: string;
+  scorerPlayerId?: string;
+  linkedShotLogId?: string;
 }
 
 export interface Player {
@@ -64,7 +69,23 @@ export interface PlayerStats {
   offReb: number;
   defReb: number;
   fouls: number;
+  assists: number;
   points: number;
   fgPercent: number;
   ftPercent: number;
+}
+
+export interface ZoneStat {
+  zoneId: number;
+  made: number;
+  miss: number;
+  attempts: number;
+  fgPercent: number;
+}
+
+export interface ZoneRebStat {
+  zoneId: number;
+  off: number;
+  def: number;
+  total: number;
 }

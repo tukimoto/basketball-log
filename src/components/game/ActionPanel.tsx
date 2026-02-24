@@ -22,6 +22,8 @@ const ACTIONS: ActionButton[] = [
   { action: "SHOT", result: "MISS", label: "シュート失敗", color: "bg-danger/20 text-danger border-danger/30", activeColor: "bg-danger text-white border-danger" },
   { action: "FT", result: "MAKE", label: "FT 成功", color: "bg-success/20 text-success border-success/30", activeColor: "bg-success text-white border-success" },
   { action: "FT", result: "MISS", label: "FT 失敗", color: "bg-danger/20 text-danger border-danger/30", activeColor: "bg-danger text-white border-danger" },
+  { action: "REB", result: "OFF", label: "オフェンスREB", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", activeColor: "bg-blue-500 text-white border-blue-500" },
+  { action: "REB", result: "DEF", label: "ディフェンスREB", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", activeColor: "bg-blue-500 text-white border-blue-500" },
   { action: "FOUL", result: "PF", label: "ファウル", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", activeColor: "bg-yellow-500 text-black border-yellow-500" },
 ];
 

@@ -33,8 +33,10 @@ interface GameStore {
   setQuarter: (q: Quarter) => void;
   selectZone: (zoneId: number) => void;
   selectAction: (action: Action, result: Result) => void;
-  selectPlayer: (playerId: string) => void;
+  selectPlayer: (playerId: string) => Log | undefined;
   resetInput: () => void;
+
+  addAssistLog: (passerPlayerId: string, scorerPlayerId: string, linkedShotLogId: string) => void;
 
   undo: () => void;
 
@@ -193,6 +195,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
       inputState: { ...emptyInput },
       inputStep: "zone",
     });
+
+    return log;
+  },
+
+  addAssistLog(passerPlayerId, scorerPlayerId, linkedShotLogId) {
+    const { currentGameId, currentQuarter, logs } = get();
+    if (!currentGameId) return;
+
+    const log: Log = {
+      id: generateId(),
+      gameId: currentGameId,
+      quarter: currentQuarter,
+      playerId: passerPlayerId,
+      action: "AST",
+      zoneId: null,
+      result: "AST",
+      timestamp: Date.now(),
+      passerPlayerId,
+      scorerPlayerId,
+      linkedShotLogId,
+    };
+
+    const nextLogs = [...logs, log];
+    storage.set(LOGS_KEY, nextLogs);
+    set({ logs: nextLogs });
   },
 
   resetInput() {
@@ -207,7 +234,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (gameLogs.length === 0) return;
 
     const lastLog = gameLogs[gameLogs.length - 1]!;
-    const nextLogs = logs.filter((l) => l.id !== lastLog.id);
+    const idsToRemove = new Set([lastLog.id]);
+
+    if (lastLog.action === "SHOT" && lastLog.result === "MAKE") {
+      for (const l of logs) {
+        if (l.action === "AST" && l.linkedShotLogId === lastLog.id) {
+          idsToRemove.add(l.id);
+        }
+      }
+    }
+
+    const nextLogs = logs.filter((l) => !idsToRemove.has(l.id));
     storage.set(LOGS_KEY, nextLogs);
     set({ logs: nextLogs, inputState: { ...emptyInput }, inputStep: "zone" });
   },

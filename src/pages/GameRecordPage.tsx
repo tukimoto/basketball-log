@@ -8,9 +8,10 @@ import ActionPanel from "@/components/game/ActionPanel";
 import GameHeader from "@/components/game/GameHeader";
 import StatsModal from "@/components/stats/StatsModal";
 import QuarterModal from "@/components/game/QuarterModal";
+import AssistModal from "@/components/game/AssistModal";
 import { useSync } from "@/hooks/useSync";
 import { calcPlayerStats, exportCSV } from "@/lib/stats";
-import type { Quarter } from "@/types";
+import type { Log, Quarter } from "@/types";
 
 export default function GameRecordPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,8 @@ export default function GameRecordPage() {
   const [statsOpen, setStatsOpen] = useState(false);
   const [quarterModalOpen, setQuarterModalOpen] = useState(false);
   const [pendingQuarter, setPendingQuarter] = useState<Quarter | null>(null);
+
+  const [assistPrompt, setAssistPrompt] = useState<{ shotLog: Log } | null>(null);
 
   const store = useGameStore();
   const {
@@ -32,6 +35,7 @@ export default function GameRecordPage() {
     selectZone,
     selectAction,
     selectPlayer,
+    addAssistLog,
     resetInput,
     undo,
     getActivePlayers,
@@ -86,6 +90,35 @@ export default function GameRecordPage() {
     [gameLogs, gamePlayerObjects],
   );
 
+  const activePlayerObjects = useMemo(
+    () => players.filter((p) => activePlayerIds.includes(p.id)),
+    [players, activePlayerIds],
+  );
+
+  const handleSelectPlayer = useCallback(
+    (playerId: string) => {
+      const wasShotMake = inputState.action === "SHOT" && inputState.result === "MAKE";
+      const log = selectPlayer(playerId);
+      if (wasShotMake && log) {
+        setAssistPrompt({ shotLog: log });
+      }
+    },
+    [inputState.action, inputState.result, selectPlayer],
+  );
+
+  const handleAssistSelect = useCallback(
+    (passerPlayerId: string) => {
+      if (!assistPrompt) return;
+      addAssistLog(passerPlayerId, assistPrompt.shotLog.playerId, assistPrompt.shotLog.id);
+      setAssistPrompt(null);
+    },
+    [assistPrompt, addAssistLog],
+  );
+
+  const handleAssistSkip = useCallback(() => {
+    setAssistPrompt(null);
+  }, []);
+
   const handleNextQuarter = useCallback(() => {
     if (currentQuarter >= 5) return;
     const next = (currentQuarter + 1) as Quarter;
@@ -106,6 +139,11 @@ export default function GameRecordPage() {
     },
     [id, getActivePlayers, setQuarter],
   );
+
+  const handleSubstitution = useCallback(() => {
+    setPendingQuarter(currentQuarter);
+    setQuarterModalOpen(true);
+  }, [currentQuarter]);
 
   const handleQuarterConfirm = useCallback(
     (selectedIds: string[]) => {
@@ -159,6 +197,7 @@ export default function GameRecordPage() {
         currentQuarter={currentQuarter}
         onQuarterChange={handleQuarterSwitch}
         onNextQuarter={handleNextQuarter}
+        onSubstitution={handleSubstitution}
         onOpponentScoreChange={(delta) => updateOpponentScore(id, delta)}
         onUndo={undo}
         onStatsOpen={() => setStatsOpen(true)}
@@ -185,6 +224,20 @@ export default function GameRecordPage() {
         </div>
       )}
 
+      <div className="px-3 py-2 border-b border-white/10 bg-slate-900/70 text-xs text-white/70 flex flex-wrap gap-x-4 gap-y-1">
+        <span>入力ステップ: <strong className="text-white">{inputStep}</strong></span>
+        <span>ゾーン: <strong className="text-white">{inputState.zoneId ?? "-"}</strong></span>
+        <span>アクション: <strong className="text-white">{inputState.action ?? "-"}</strong></span>
+        <span>結果: <strong className="text-white">{inputState.result ?? "-"}</strong></span>
+        <span>選手: <strong className="text-white">{inputState.playerId ?? "-"}</strong></span>
+      </div>
+
+      {gameLogs.length > 0 && (
+        <div className="px-3 py-2 border-b border-white/10 bg-slate-900/60 text-xs text-white/60">
+          直近ログ: Q{gameLogs[gameLogs.length - 1]!.quarter} / Z{gameLogs[gameLogs.length - 1]!.zoneId ?? "-"} / {gameLogs[gameLogs.length - 1]!.action} / {gameLogs[gameLogs.length - 1]!.result}
+        </div>
+      )}
+
       {/* iPad layout (md+): 3-pane */}
       <div className="hidden md:flex flex-1 min-h-0">
         <div className="w-[20%] overflow-y-auto border-r border-white/10">
@@ -192,7 +245,7 @@ export default function GameRecordPage() {
             players={players}
             activePlayerIds={activePlayerIds}
             selectedPlayerId={inputState.playerId}
-            onSelect={selectPlayer}
+            onSelect={handleSelectPlayer}
             highlightStep={inputStep === "player"}
             disabled={inputStep !== "player"}
           />
@@ -238,12 +291,25 @@ export default function GameRecordPage() {
             players={players}
             activePlayerIds={activePlayerIds}
             selectedPlayerId={inputState.playerId}
-            onSelect={selectPlayer}
+            onSelect={handleSelectPlayer}
             highlightStep={inputStep === "player"}
             disabled={inputStep !== "player"}
           />
         </div>
       </div>
+
+      <AssistModal
+        isOpen={assistPrompt !== null}
+        scorerName={
+          assistPrompt
+            ? (players.find((p) => p.id === assistPrompt.shotLog.playerId)?.name ?? "選手")
+            : ""
+        }
+        activePlayers={activePlayerObjects}
+        scorerPlayerId={assistPrompt?.shotLog.playerId ?? ""}
+        onSelect={handleAssistSelect}
+        onSkip={handleAssistSkip}
+      />
 
       <StatsModal
         isOpen={statsOpen}
