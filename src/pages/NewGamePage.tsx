@@ -79,7 +79,28 @@ export default function NewGamePage() {
 
         {/* Player selection */}
         <div className="mb-8">
-          <h2 className="text-lg font-bold mb-1">ベンチ入りメンバー</h2>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-lg font-bold">ベンチ入りメンバー</h2>
+            {players.length > 0 && (
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setSelectedPlayerIds(players.map(p => p.id))}
+                  className="text-xs text-accent hover:underline"
+                >
+                  全員選択
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedPlayerIds([]);
+                    setActivePlayerIds([]);
+                  }}
+                  className="text-xs text-white/50 hover:underline"
+                >
+                  選択解除
+                </button>
+              </div>
+            )}
+          </div>
           <p className="text-sm text-white/50 mb-4">
             選手を選択し、先発5名を指定してください
             （選択: {selectedPlayerIds.length}名 / 先発: {activePlayerIds.length}/5名）
