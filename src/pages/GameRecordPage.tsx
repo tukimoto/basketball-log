@@ -7,6 +7,7 @@ import PlayerPanel from "@/components/game/PlayerPanel";
 import ActionPanel from "@/components/game/ActionPanel";
 import GameHeader from "@/components/game/GameHeader";
 import StatsModal from "@/components/stats/StatsModal";
+import LogHistoryModal from "@/components/game/LogHistoryModal";
 import QuarterModal from "@/components/game/QuarterModal";
 import AssistModal from "@/components/game/AssistModal";
 import { useSync } from "@/hooks/useSync";
@@ -17,34 +18,34 @@ export default function GameRecordPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [statsOpen, setStatsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [quarterModalOpen, setQuarterModalOpen] = useState(false);
   const [pendingQuarter, setPendingQuarter] = useState<Quarter | null>(null);
 
   const [assistPrompt, setAssistPrompt] = useState<{ shotLog: Log } | null>(null);
 
-  const store = useGameStore();
-  const {
-    games,
-    gamePlayers: allGamePlayers,
-    logs: allLogs,
-    currentQuarter,
-    inputState,
-    inputStep,
-    setCurrentGame,
-    setQuarter,
-    selectZone,
-    selectAction,
-    selectPlayer,
-    addAssistLog,
-    resetInput,
-    undo,
-    getActivePlayers,
-    getGameLogs,
-    getTeamScore,
-    getGamePlayerIds,
-    updateOpponentScore,
-    togglePlayerActive,
-  } = store;
+  const games = useGameStore((s) => s.games);
+  const allGamePlayers = useGameStore((s) => s.gamePlayers);
+  const allLogs = useGameStore((s) => s.logs);
+  const currentQuarter = useGameStore((s) => s.currentQuarter);
+  const inputState = useGameStore((s) => s.inputState);
+  const inputStep = useGameStore((s) => s.inputStep);
+
+  const setCurrentGame = useGameStore((s) => s.setCurrentGame);
+  const setQuarter = useGameStore((s) => s.setQuarter);
+  const selectZone = useGameStore((s) => s.selectZone);
+  const selectAction = useGameStore((s) => s.selectAction);
+  const selectPlayer = useGameStore((s) => s.selectPlayer);
+  const addAssistLog = useGameStore((s) => s.addAssistLog);
+  const resetInput = useGameStore((s) => s.resetInput);
+  const undo = useGameStore((s) => s.undo);
+  const getActivePlayers = useGameStore((s) => s.getActivePlayers);
+  const getGameLogs = useGameStore((s) => s.getGameLogs);
+  const getTeamScore = useGameStore((s) => s.getTeamScore);
+  const getGamePlayerIds = useGameStore((s) => s.getGamePlayerIds);
+  const updateOpponentScore = useGameStore((s) => s.updateOpponentScore);
+  const setOpponentScore = useGameStore((s) => s.setOpponentScore);
+  const togglePlayerActive = useGameStore((s) => s.togglePlayerActive);
 
   const { players } = usePlayerStore();
   const { pushToCloud } = useSync();
@@ -199,7 +200,9 @@ export default function GameRecordPage() {
         onNextQuarter={handleNextQuarter}
         onSubstitution={handleSubstitution}
         onOpponentScoreChange={(delta) => updateOpponentScore(id, delta)}
+        onOpponentScoreSet={(score) => setOpponentScore(id, score)}
         onUndo={undo}
+        onHistoryOpen={() => setHistoryOpen(true)}
         onStatsOpen={() => setStatsOpen(true)}
         onReset={resetInput}
         onBack={() => navigate("/")}
@@ -319,6 +322,12 @@ export default function GameRecordPage() {
         opponentName={game.opponentName}
         opponentScore={game.opponentScore}
         onExportCSV={handleExportCSV}
+      />
+
+      <LogHistoryModal
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        gameId={id}
       />
 
       <QuarterModal

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
-import { Undo2, BarChart3, Minus, Plus, ChevronRight, ArrowLeft, Flag } from "lucide-react";
+import { Undo2, BarChart3, Minus, Plus, ChevronRight, ArrowLeft, Flag, History } from "lucide-react";
 import type { Quarter } from "@/types";
+import { useState, useEffect } from "react";
 
 interface GameHeaderProps {
   opponentName: string;
@@ -11,7 +12,9 @@ interface GameHeaderProps {
   onNextQuarter: () => void;
   onSubstitution: () => void;
   onOpponentScoreChange: (delta: number) => void;
+  onOpponentScoreSet: (score: number) => void;
   onUndo: () => void;
+  onHistoryOpen: () => void;
   onStatsOpen: () => void;
   onReset: () => void;
   onBack: () => void;
@@ -36,13 +39,30 @@ export default function GameHeader({
   onNextQuarter,
   onSubstitution,
   onOpponentScoreChange,
+  onOpponentScoreSet,
   onUndo,
+  onHistoryOpen,
   onStatsOpen,
   onReset,
   onBack,
   onEndGame,
   inputStep,
 }: GameHeaderProps) {
+  const [isEditingOpponentScore, setIsEditingOpponentScore] = useState(false);
+  const [editingScore, setEditingScore] = useState(opponentScore.toString());
+
+  useEffect(() => {
+    setEditingScore(opponentScore.toString());
+  }, [opponentScore]);
+
+  const handleScoreSubmit = () => {
+    const val = parseInt(editingScore, 10);
+    if (!isNaN(val)) {
+      onOpponentScoreSet(val);
+    }
+    setIsEditingOpponentScore(false);
+  };
+
   return (
     <header className="bg-primary px-3 py-2 flex items-center gap-2 shrink-0 flex-wrap">
       {/* Back button */}
@@ -109,9 +129,25 @@ export default function GameHeader({
             >
               <Minus size={12} />
             </button>
-            <span className="text-xl font-bold text-white tabular-nums min-w-[2ch] text-center">
-              {opponentScore}
-            </span>
+            {isEditingOpponentScore ? (
+              <input
+                type="number"
+                className="w-12 h-6 bg-white/20 text-white font-bold rounded text-center focus:outline-none focus:ring-1 focus:ring-accent"
+                value={editingScore}
+                onChange={(e) => setEditingScore(e.target.value)}
+                onBlur={handleScoreSubmit}
+                onKeyDown={(e) => e.key === "Enter" && handleScoreSubmit()}
+                autoFocus
+              />
+            ) : (
+              <span
+                onClick={() => setIsEditingOpponentScore(true)}
+                className="text-xl font-bold text-white tabular-nums min-w-[2ch] text-center cursor-pointer hover:text-accent transition-colors"
+                title="タップして直接入力"
+              >
+                {opponentScore}
+              </span>
+            )}
             <button
               onClick={() => onOpponentScoreChange(1)}
               className="w-6 h-6 rounded bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 active:scale-90"
@@ -148,9 +184,16 @@ export default function GameHeader({
         <button
           onClick={onUndo}
           className="p-1.5 rounded bg-white/10 text-white/80 hover:bg-white/20 active:scale-90 transition-all"
-          title="取り消し"
+          title="直前を取り消し"
         >
           <Undo2 size={16} />
+        </button>
+        <button
+          onClick={onHistoryOpen}
+          className="p-1.5 rounded bg-white/10 text-white/80 hover:bg-white/20 active:scale-90 transition-all"
+          title="入力履歴"
+        >
+          <History size={16} />
         </button>
         <button
           onClick={onStatsOpen}

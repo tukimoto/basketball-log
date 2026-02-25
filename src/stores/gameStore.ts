@@ -24,6 +24,7 @@ interface GameStore {
   deleteGame: (id: string) => void;
   setCurrentGame: (id: string | null) => void;
   updateOpponentScore: (gameId: string, delta: number) => void;
+  setOpponentScore: (gameId: string, score: number) => void;
 
   setGamePlayers: (gameId: string, playerIds: string[], activePlayerIds: string[]) => void;
   togglePlayerActive: (gameId: string, playerId: string, quarter: Quarter) => void;
@@ -39,6 +40,8 @@ interface GameStore {
   addAssistLog: (passerPlayerId: string, scorerPlayerId: string, linkedShotLogId: string) => void;
 
   undo: () => void;
+  deleteLog: (logId: string) => void;
+  updateLog: (logId: string, updatedLog: Partial<Log>) => void;
 
   getGameLogs: (gameId: string) => Log[];
   getTeamScore: (gameId: string) => number;
@@ -100,6 +103,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       g.id === gameId
         ? { ...g, opponentScore: Math.max(0, g.opponentScore + delta) }
         : g,
+    );
+    storage.set(GAMES_KEY, games);
+    set({ games });
+  },
+
+  setOpponentScore(gameId, score) {
+    const games = get().games.map((g) =>
+      g.id === gameId ? { ...g, opponentScore: Math.max(0, score) } : g,
     );
     storage.set(GAMES_KEY, games);
     set({ games });
@@ -234,11 +245,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (gameLogs.length === 0) return;
 
     const lastLog = gameLogs[gameLogs.length - 1]!;
-    const idsToRemove = new Set([lastLog.id]);
+    get().deleteLog(lastLog.id);
+  },
 
-    if (lastLog.action === "SHOT" && lastLog.result === "MAKE") {
+  deleteLog(logId) {
+    const { logs } = get();
+    const logToDelete = logs.find((l) => l.id === logId);
+    if (!logToDelete) return;
+
+    const idsToRemove = new Set([logId]);
+
+    // シュート成功を消す場合、紐づくアシストも消す
+    if (logToDelete.action === "SHOT" && logToDelete.result === "MAKE") {
       for (const l of logs) {
-        if (l.action === "AST" && l.linkedShotLogId === lastLog.id) {
+        if (l.action === "AST" && l.linkedShotLogId === logId) {
           idsToRemove.add(l.id);
         }
       }
@@ -246,7 +266,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const nextLogs = logs.filter((l) => !idsToRemove.has(l.id));
     storage.set(LOGS_KEY, nextLogs);
-    set({ logs: nextLogs, inputState: { ...emptyInput }, inputStep: "zone" });
+    set({ logs: nextLogs });
+  },
+
+  updateLog(logId, updatedLog) {
+    const nextLogs = get().logs.map((l) =>
+      l.id === logId ? { ...l, ...updatedLog } : l,
+    );
+    storage.set(LOGS_KEY, nextLogs);
+    set({ logs: nextLogs });
   },
 
   getGameLogs(gameId) {
