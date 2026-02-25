@@ -207,7 +207,6 @@ export default function GameRecordPage() {
         onReset={resetInput}
         onBack={() => navigate("/")}
         onEndGame={handleEndGame}
-        inputStep={inputStep}
       />
 
       {activePlayerIds.length === 0 && (

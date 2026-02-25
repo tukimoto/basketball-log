@@ -19,7 +19,6 @@ interface GameHeaderProps {
   onReset: () => void;
   onBack: () => void;
   onEndGame: () => void;
-  inputStep: string;
 }
 
 const QUARTERS: { value: Quarter; label: string }[] = [
@@ -46,7 +45,6 @@ export default function GameHeader({
   onReset,
   onBack,
   onEndGame,
-  inputStep,
 }: GameHeaderProps) {
   const [isEditingOpponentScore, setIsEditingOpponentScore] = useState(false);
   const [editingScore, setEditingScore] = useState(opponentScore.toString());
@@ -156,21 +154,6 @@ export default function GameHeader({
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Step indicator (desktop only) */}
-      <div className="hidden md:flex items-center gap-1 ml-3">
-        {(["zone", "action", "player"] as const).map((step) => (
-          <span
-            key={step}
-            className={cn(
-              "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
-              inputStep === step ? "bg-accent text-black" : "bg-white/10 text-white/40",
-            )}
-          >
-            {step === "zone" ? "ゾーン" : step === "action" ? "アクション" : "選手"}
-          </span>
-        ))}
       </div>
 
       {/* Action buttons */}
