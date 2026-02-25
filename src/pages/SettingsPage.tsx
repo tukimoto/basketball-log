@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePlayerStore } from "@/stores/playerStore";
+import { api } from "@/api/client";
 import BackLink from "@/components/common/BackLink";
 import { Pencil, Trash2, Plus, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -135,9 +136,15 @@ export default function SettingsPage() {
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(`${p.name} を削除しますか？`))
+                      onClick={async () => {
+                        if (confirm(`${p.name} を削除しますか？`)) {
                           remove(p.id);
+                          try {
+                            await api.players.remove(p.id);
+                          } catch (err) {
+                            console.error("Failed to delete player from DB:", err);
+                          }
+                        }
                       }}
                       className="p-1.5 rounded bg-white/10 text-white/30 hover:bg-danger/20 hover:text-danger"
                     >

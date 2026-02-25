@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useGameStore } from "@/stores/gameStore";
 import { useSync } from "@/hooks/useSync";
+import { api } from "@/api/client";
 import { Plus, Settings, Trash2, Play, BarChart3, CloudUpload, CloudDownload, Loader2 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 import { calcTeamScore } from "@/lib/stats";
@@ -119,9 +120,15 @@ export default function HomePage() {
                       <Play size={18} />
                     </Link>
                     <button
-                      onClick={() => {
-                        if (confirm(`「vs ${game.opponentName}」を削除しますか？`))
+                      onClick={async () => {
+                        if (confirm(`「vs ${game.opponentName}」を削除しますか？`)) {
                           deleteGame(game.id);
+                          try {
+                            await api.games.remove(game.id);
+                          } catch (err) {
+                            console.error("Failed to delete game from DB:", err);
+                          }
+                        }
                       }}
                       className="p-2 rounded-lg bg-white/5 hover:bg-danger/20 text-white/30 hover:text-danger transition-colors"
                       title="削除"
