@@ -7,7 +7,7 @@ import { calcTeamScore } from "@/lib/stats";
 
 export default function HomePage() {
   const { games, logs, deleteGame } = useGameStore();
-  const { status, lastSynced, pushToCloud, pullFromCloud } = useSync();
+  const { status, errorMessage, lastPushCounts, lastSynced, pushToCloud, pullFromCloud } = useSync();
 
   const sortedGames = [...games].sort((a, b) => b.createdAt - a.createdAt);
 
@@ -53,6 +53,17 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+
+        {status === "error" && errorMessage && (
+          <div className="mb-4 p-3 rounded-lg bg-danger/20 border border-danger/40 text-danger text-sm">
+            同期エラー: {errorMessage}
+          </div>
+        )}
+        {status === "success" && lastPushCounts && (
+          <div className="mb-4 p-3 rounded-lg bg-success/20 border border-success/40 text-success text-sm">
+            保存しました (選手: {lastPushCounts.players} / 試合: {lastPushCounts.games} / ログ: {lastPushCounts.logs})
+          </div>
+        )}
 
         {/* New game button */}
         <Link

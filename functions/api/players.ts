@@ -22,13 +22,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const authErr = checkAuth(request, env);
   if (authErr) return authErr;
 
-  const body = (await request.json()) as PlayerBody;
-  await env.DB.prepare(
-    "INSERT OR REPLACE INTO players (id, number, name, created_at) VALUES (?, ?, ?, ?)",
-  )
-    .bind(body.id, body.number, body.name, body.createdAt)
-    .run();
-  return jsonResponse({ ok: true }, 201);
+  try {
+    const body = (await request.json()) as PlayerBody | PlayerBody[];
+    const entries = Array.isArray(body) ? body : [body];
+
+    const stmt = env.DB.prepare(
+      "INSERT OR REPLACE INTO players (id, number, name, created_at) VALUES (?, ?, ?, ?)",
+    );
+
+    const batch = entries.map((e) => stmt.bind(e.id, e.number, e.name, e.createdAt));
+
+    await env.DB.batch(batch);
+    return jsonResponse({ ok: true, count: entries.length }, 201);
+  } catch (err) {
+    console.error("D1 Batch Insert Error (players):", err);
+    return errorResponse(err instanceof Error ? err.message : "Database error", 500);
+  }
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ env, request }) => {

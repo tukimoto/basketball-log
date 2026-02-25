@@ -42,33 +42,38 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const authErr = checkAuth(request, env);
   if (authErr) return authErr;
 
-  const body = (await request.json()) as LogBody | LogBody[];
-  const entries = Array.isArray(body) ? body : [body];
+  try {
+    const body = (await request.json()) as LogBody | LogBody[];
+    const entries = Array.isArray(body) ? body : [body];
 
-  const stmt = env.DB.prepare(
-    `INSERT OR REPLACE INTO logs
-      (id, game_id, quarter, player_id, action, zone_id, result, timestamp, passer_player_id, scorer_player_id, linked_shot_log_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
+    const stmt = env.DB.prepare(
+      `INSERT OR REPLACE INTO logs
+        (id, game_id, quarter, player_id, action, zone_id, result, timestamp, passer_player_id, scorer_player_id, linked_shot_log_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
 
-  const batch = entries.map((e) =>
-    stmt.bind(
-      e.id,
-      e.gameId,
-      e.quarter,
-      e.playerId,
-      e.action,
-      e.zoneId,
-      e.result,
-      e.timestamp,
-      e.passerPlayerId ?? null,
-      e.scorerPlayerId ?? null,
-      e.linkedShotLogId ?? null,
-    ),
-  );
+    const batch = entries.map((e) =>
+      stmt.bind(
+        e.id,
+        e.gameId,
+        e.quarter,
+        e.playerId,
+        e.action,
+        e.zoneId ?? null,
+        e.result,
+        e.timestamp,
+        e.passerPlayerId ?? null,
+        e.scorerPlayerId ?? null,
+        e.linkedShotLogId ?? null,
+      ),
+    );
 
-  await env.DB.batch(batch);
-  return jsonResponse({ ok: true, count: entries.length }, 201);
+    await env.DB.batch(batch);
+    return jsonResponse({ ok: true, count: entries.length }, 201);
+  } catch (err) {
+    console.error("D1 Batch Insert Error:", err);
+    return errorResponse(err instanceof Error ? err.message : "Database error", 500);
+  }
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ env, request }) => {

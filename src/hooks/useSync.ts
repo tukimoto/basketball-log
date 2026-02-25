@@ -8,6 +8,12 @@ type SyncStatus = "idle" | "syncing" | "success" | "error" | "offline";
 
 export function useSync() {
   const [status, setStatus] = useState<SyncStatus>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastPushCounts, setLastPushCounts] = useState<{
+    players: number;
+    games: number;
+    logs: number;
+  } | null>(null);
   const [lastSynced, setLastSynced] = useState<number | null>(
     storage.get<number>("last_synced"),
   );
@@ -15,17 +21,23 @@ export function useSync() {
   const pushToCloud = useCallback(async () => {
     if (!navigator.onLine) {
       setStatus("offline");
+      setErrorMessage(null);
       return;
     }
 
     setStatus("syncing");
+    setErrorMessage(null);
+    setLastPushCounts(null);
     try {
       const { players } = usePlayerStore.getState();
       const { games, gamePlayers, logs } = useGameStore.getState();
 
-      await Promise.all(players.map((p) => api.players.save(p)));
-      await Promise.all(games.map((g) => api.games.save(g)));
-
+      if (players.length > 0) {
+        await api.players.save(players);
+      }
+      if (games.length > 0) {
+        await api.games.save(games);
+      }
       if (gamePlayers.length > 0) {
         await api.gamePlayers.save(gamePlayers);
       }
@@ -36,8 +48,11 @@ export function useSync() {
       const now = Date.now();
       storage.set("last_synced", now);
       setLastSynced(now);
+      setLastPushCounts({ players: players.length, games: games.length, logs: logs.length });
       setStatus("success");
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(msg);
       setStatus("error");
     }
   }, []);
@@ -45,10 +60,12 @@ export function useSync() {
   const pullFromCloud = useCallback(async () => {
     if (!navigator.onLine) {
       setStatus("offline");
+      setErrorMessage(null);
       return;
     }
 
     setStatus("syncing");
+    setErrorMessage(null);
     try {
       const [cloudPlayers, cloudGames, cloudGamePlayers, cloudLogs] =
         await Promise.allSettled([
@@ -58,13 +75,6 @@ export function useSync() {
           api.logs.list(),
         ]);
 
-      const players =
-        cloudPlayers.status === "fulfilled" ? cloudPlayers.value : [];
-      const games = cloudGames.status === "fulfilled" ? cloudGames.value : [];
-      const gamePlayers =
-        cloudGamePlayers.status === "fulfilled" ? cloudGamePlayers.value : [];
-      const logs = cloudLogs.status === "fulfilled" ? cloudLogs.value : [];
-
       const { players: localPlayers } = usePlayerStore.getState();
       const {
         games: localGames,
@@ -72,11 +82,23 @@ export function useSync() {
         logs: localLogs,
       } = useGameStore.getState();
 
+      const players =
+        cloudPlayers.status === "fulfilled" ? cloudPlayers.value : localPlayers;
+      const games =
+        cloudGames.status === "fulfilled" ? cloudGames.value : localGames;
+      const gamePlayers =
+        cloudGamePlayers.status === "fulfilled"
+          ? cloudGamePlayers.value
+          : localGamePlayers;
+      const logs =
+        cloudLogs.status === "fulfilled" ? cloudLogs.value : localLogs;
+
       const hasCloudData =
-        players.length > 0 ||
-        games.length > 0 ||
-        gamePlayers.length > 0 ||
-        logs.length > 0;
+        (cloudPlayers.status === "fulfilled" && cloudPlayers.value.length > 0) ||
+        (cloudGames.status === "fulfilled" && cloudGames.value.length > 0) ||
+        (cloudGamePlayers.status === "fulfilled" &&
+          cloudGamePlayers.value.length > 0) ||
+        (cloudLogs.status === "fulfilled" && cloudLogs.value.length > 0);
       const hasLocalData =
         localPlayers.length > 0 ||
         localGames.length > 0 ||
@@ -100,7 +122,9 @@ export function useSync() {
       storage.set("last_synced", now);
       setLastSynced(now);
       setStatus("success");
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMessage(msg);
       setStatus("error");
     }
   }, []);
@@ -116,5 +140,5 @@ export function useSync() {
     };
   }, []);
 
-  return { status, lastSynced, pushToCloud, pullFromCloud };
+  return { status, errorMessage, lastPushCounts, lastSynced, pushToCloud, pullFromCloud };
 }

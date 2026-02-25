@@ -25,14 +25,14 @@ async function request<T>(
 export const api = {
   players: {
     list: () => request<{ id: string; number: number; name: string; createdAt: number }[]>("/players"),
-    save: (data: { id: string; number: number; name: string; createdAt: number }) =>
+    save: (data: unknown) =>
       request("/players", { method: "POST", body: JSON.stringify(data) }),
     remove: (id: string) => request(`/players?id=${id}`, { method: "DELETE" }),
   },
   games: {
     list: () =>
       request<{ id: string; opponentName: string; gameDate: string; opponentScore: number; createdAt: number }[]>("/games"),
-    save: (data: { id: string; opponentName: string; gameDate: string; opponentScore: number; createdAt: number }) =>
+    save: (data: unknown) =>
       request("/games", { method: "POST", body: JSON.stringify(data) }),
     remove: (id: string) => request(`/games?id=${id}`, { method: "DELETE" }),
   },

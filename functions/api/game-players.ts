@@ -45,23 +45,28 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
   const authErr = checkAuth(request, env);
   if (authErr) return authErr;
 
-  const body = (await request.json()) as GamePlayerBody | GamePlayerBody[];
-  const entries = Array.isArray(body) ? body : [body];
+  try {
+    const body = (await request.json()) as GamePlayerBody | GamePlayerBody[];
+    const entries = Array.isArray(body) ? body : [body];
 
-  const stmt = env.DB.prepare(
-    "INSERT OR REPLACE INTO game_players (game_id, player_id, is_active_q1, is_active_q2, is_active_q3, is_active_q4, is_active_q5) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  );
+    const stmt = env.DB.prepare(
+      "INSERT OR REPLACE INTO game_players (game_id, player_id, is_active_q1, is_active_q2, is_active_q3, is_active_q4, is_active_q5) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    );
 
-  const batch = entries.map((e) =>
-    stmt.bind(
-      e.gameId, e.playerId,
-      e.isActiveQ1 ? 1 : 0, e.isActiveQ2 ? 1 : 0, e.isActiveQ3 ? 1 : 0,
-      e.isActiveQ4 ? 1 : 0, e.isActiveQ5 ? 1 : 0,
-    ),
-  );
+    const batch = entries.map((e) =>
+      stmt.bind(
+        e.gameId, e.playerId,
+        e.isActiveQ1 ? 1 : 0, e.isActiveQ2 ? 1 : 0, e.isActiveQ3 ? 1 : 0,
+        e.isActiveQ4 ? 1 : 0, e.isActiveQ5 ? 1 : 0,
+      ),
+    );
 
-  await env.DB.batch(batch);
-  return jsonResponse({ ok: true, count: entries.length }, 201);
+    await env.DB.batch(batch);
+    return jsonResponse({ ok: true, count: entries.length }, 201);
+  } catch (err) {
+    console.error("D1 Batch Insert Error (game-players):", err);
+    return errorResponse(err instanceof Error ? err.message : "Database error", 500);
+  }
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ env, request }) => {
