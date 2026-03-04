@@ -7,6 +7,7 @@ CREATE TABLE players (
   id TEXT PRIMARY KEY,
   number INTEGER NOT NULL,
   name TEXT NOT NULL,
+  graduation_year INTEGER NOT NULL DEFAULT 2027,
   created_at INTEGER NOT NULL
 );
 

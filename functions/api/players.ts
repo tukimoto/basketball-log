@@ -5,6 +5,7 @@ interface PlayerBody {
   id: string;
   number: number;
   name: string;
+  graduationYear: number;
   createdAt: number;
 }
 
@@ -13,7 +14,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   if (authErr) return authErr;
 
   const { results } = await env.DB.prepare(
-    "SELECT id, number, name, created_at as createdAt FROM players ORDER BY number",
+    "SELECT id, number, name, graduation_year as graduationYear, created_at as createdAt FROM players ORDER BY number",
   ).all();
   return jsonResponse(results);
 };
@@ -27,10 +28,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
     const entries = Array.isArray(body) ? body : [body];
 
     const stmt = env.DB.prepare(
-      "INSERT OR REPLACE INTO players (id, number, name, created_at) VALUES (?, ?, ?, ?)",
+      "INSERT OR REPLACE INTO players (id, number, name, graduation_year, created_at) VALUES (?, ?, ?, ?, ?)",
     );
 
-    const batch = entries.map((e) => stmt.bind(e.id, e.number, e.name, e.createdAt));
+    const batch = entries.map((e) => stmt.bind(e.id, e.number, e.name, e.graduationYear ?? 2027, e.createdAt));
 
     await env.DB.batch(batch);
     return jsonResponse({ ok: true, count: entries.length }, 201);
