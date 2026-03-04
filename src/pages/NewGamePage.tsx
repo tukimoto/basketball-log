@@ -4,6 +4,7 @@ import { useGameStore } from "@/stores/gameStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import BackLink from "@/components/common/BackLink";
 import { todayISO, cn } from "@/lib/utils";
+import { filterPlayersByMaxGrade } from "@/lib/academicYear";
 
 export default function NewGamePage() {
   const navigate = useNavigate();
@@ -12,13 +13,26 @@ export default function NewGamePage() {
 
   const [opponentName, setOpponentName] = useState("");
   const [gameDate, setGameDate] = useState(todayISO());
+  const [maxGrade, setMaxGrade] = useState<number>(6); // デフォルト制限なし（6年生まで）
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
   const [activePlayerIds, setActivePlayerIds] = useState<string[]>([]);
 
   const sortedPlayers = useMemo(
-    () => [...players].sort((a, b) => a.number - b.number),
-    [players],
+    () => {
+      const filtered = filterPlayersByMaxGrade(players, maxGrade);
+      return filtered.sort((a, b) => a.number - b.number);
+    },
+    [players, maxGrade],
   );
+
+  // 大会カテゴリ変更時、該当しなくなった選手を選択状態から外す
+  const handleMaxGradeChange = (newMaxGrade: number) => {
+    setMaxGrade(newMaxGrade);
+    const allowed = filterPlayersByMaxGrade(players, newMaxGrade);
+    const allowedIds = allowed.map((p) => p.id);
+    setSelectedPlayerIds((prev) => prev.filter((id) => allowedIds.includes(id)));
+    setActivePlayerIds((prev) => prev.filter((id) => allowedIds.includes(id)));
+  };
 
   const toggleSelected = (id: string) => {
     setSelectedPlayerIds((prev) =>
@@ -75,16 +89,29 @@ export default function NewGamePage() {
               className="w-full px-4 py-3 rounded-lg bg-surface border border-white/10 text-white focus:outline-none focus:border-accent"
             />
           </div>
+          <div>
+            <label className="block text-sm text-white/60 mb-1">対象区分（カテゴリ）</label>
+            <select
+              value={maxGrade}
+              onChange={(e) => handleMaxGradeChange(Number(e.target.value))}
+              className="w-full px-4 py-3 rounded-lg bg-surface border border-white/10 text-white focus:outline-none focus:border-accent appearance-none"
+            >
+              <option value={6}>U12（全学年）</option>
+              <option value={5}>U11（5年生以下）</option>
+              <option value={4}>U10（4年生以下）</option>
+              <option value={3}>U9（3年生以下）</option>
+            </select>
+          </div>
         </div>
 
         {/* Player selection */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-lg font-bold">ベンチ入りメンバー</h2>
-            {players.length > 0 && (
+            {sortedPlayers.length > 0 && (
               <div className="flex gap-4">
                 <button
-                  onClick={() => setSelectedPlayerIds(players.map(p => p.id))}
+                  onClick={() => setSelectedPlayerIds(sortedPlayers.map(p => p.id))}
                   className="text-xs text-accent hover:underline"
                 >
                   全員選択
@@ -115,6 +142,10 @@ export default function NewGamePage() {
               >
                 選手を登録する
               </button>
+            </div>
+          ) : sortedPlayers.length === 0 ? (
+            <div className="text-center py-8 text-white/30 bg-surface rounded-xl">
+              <p>選択された対象区分（{maxGrade}年生以下）に該当するメンバーがいません</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">

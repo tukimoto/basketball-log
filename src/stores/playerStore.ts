@@ -8,8 +8,8 @@ const STORAGE_KEY = "players";
 interface PlayerStore {
   players: Player[];
   load: () => void;
-  add: (number: number, name: string) => Player;
-  update: (id: string, data: Partial<Pick<Player, "number" | "name">>) => void;
+  add: (number: number, name: string, graduationYear: number) => Player;
+  update: (id: string, data: Partial<Pick<Player, "number" | "name" | "graduationYear">>) => void;
   remove: (id: string) => void;
 }
 
@@ -21,11 +21,12 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     if (saved) set({ players: saved });
   },
 
-  add(number, name) {
+  add(number, name, graduationYear) {
     const player: Player = {
       id: generateId(),
       number,
       name,
+      graduationYear,
       createdAt: Date.now(),
     };
     const next = [...get().players, player];

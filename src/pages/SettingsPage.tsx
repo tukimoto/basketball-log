@@ -4,23 +4,34 @@ import { api } from "@/api/client";
 import BackLink from "@/components/common/BackLink";
 import { Pencil, Trash2, Plus, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { calculateGrade, getGradeLabel, calculateGraduationYearFromGrade } from "@/lib/academicYear";
 
 export default function SettingsPage() {
   const { players, add, update, remove } = usePlayerStore();
   const [newNumber, setNewNumber] = useState("");
   const [newName, setNewName] = useState("");
+  const [newGrade, setNewGrade] = useState<number>(6);
   const [editId, setEditId] = useState<string | null>(null);
   const [editNumber, setEditNumber] = useState("");
   const [editName, setEditName] = useState("");
+  const [editGrade, setEditGrade] = useState<number>(6);
 
-  const sorted = [...players].sort((a, b) => a.number - b.number);
+  const sorted = [...players].sort((a, b) => {
+    // 学年降順 → 背番号昇順
+    const gradeA = calculateGrade(a.graduationYear);
+    const gradeB = calculateGrade(b.graduationYear);
+    if (gradeA !== gradeB) return gradeB - gradeA;
+    return a.number - b.number;
+  });
 
   const handleAdd = () => {
     const num = parseInt(newNumber, 10);
     if (isNaN(num) || newName.trim() === "") return;
-    add(num, newName.trim());
+    const graduationYear = calculateGraduationYearFromGrade(newGrade);
+    add(num, newName.trim(), graduationYear);
     setNewNumber("");
     setNewName("");
+    setNewGrade(6);
   };
 
   const startEdit = (id: string) => {
@@ -29,13 +40,15 @@ export default function SettingsPage() {
     setEditId(id);
     setEditNumber(String(p.number));
     setEditName(p.name);
+    setEditGrade(calculateGrade(p.graduationYear));
   };
 
   const saveEdit = () => {
     if (!editId) return;
     const num = parseInt(editNumber, 10);
     if (isNaN(num) || editName.trim() === "") return;
-    update(editId, { number: num, name: editName.trim() });
+    const graduationYear = calculateGraduationYearFromGrade(editGrade);
+    update(editId, { number: num, name: editName.trim(), graduationYear });
     setEditId(null);
   };
 
@@ -69,6 +82,19 @@ export default function SettingsPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
                 className="flex-1 min-w-0 px-3 py-2.5 rounded-lg bg-surface-light border border-white/10 text-white placeholder:text-white/30 focus:outline-none focus:border-accent"
               />
+              <select
+                value={newGrade}
+                onChange={(e) => setNewGrade(Number(e.target.value))}
+                className="w-24 shrink-0 px-2 py-2.5 rounded-lg bg-surface-light border border-white/10 text-white focus:outline-none focus:border-accent appearance-none text-center"
+              >
+                <option value={6}>6年生</option>
+                <option value={5}>5年生</option>
+                <option value={4}>4年生</option>
+                <option value={3}>3年生</option>
+                <option value={2}>2年生</option>
+                <option value={1}>1年生</option>
+                <option value={0}>未就学児</option>
+              </select>
             </div>
             <button
               type="button"
@@ -112,6 +138,20 @@ export default function SettingsPage() {
                     onKeyDown={(e) => e.key === "Enter" && saveEdit()}
                     className="flex-1 px-2 py-1.5 rounded bg-surface-light border border-white/10 text-white text-sm focus:outline-none focus:border-accent"
                   />
+                  <select
+                    value={editGrade}
+                    onChange={(e) => setEditGrade(Number(e.target.value))}
+                    className="w-24 shrink-0 px-1 py-1.5 rounded bg-surface-light border border-white/10 text-white text-sm focus:outline-none focus:border-accent appearance-none text-center"
+                  >
+                    <option value={6}>6年生</option>
+                    <option value={5}>5年生</option>
+                    <option value={4}>4年生</option>
+                    <option value={3}>3年生</option>
+                    <option value={2}>2年生</option>
+                    <option value={1}>1年生</option>
+                    <option value={0}>未就学児</option>
+                    <option value={7}>OB/OG</option>
+                  </select>
                   <button onClick={saveEdit} className="p-1.5 rounded bg-success/20 text-success hover:bg-success/30">
                     <Check size={16} />
                   </button>
@@ -127,7 +167,12 @@ export default function SettingsPage() {
                   <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white font-bold shrink-0">
                     {p.number}
                   </span>
-                  <span className="flex-1 font-bold truncate">{p.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold truncate">{p.name}</div>
+                    <div className="text-xs text-white/50 mt-0.5">
+                      {getGradeLabel(calculateGrade(p.graduationYear))}
+                    </div>
+                  </div>
                   <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => startEdit(p.id)}

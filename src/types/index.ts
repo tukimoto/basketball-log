@@ -28,6 +28,7 @@ export interface Player {
   id: string;
   number: number;
   name: string;
+  graduationYear: number;
   createdAt: number;
 }
 
